@@ -17,9 +17,13 @@ public:
 
     virtual void HandleInput(SDL_Keysym key, Uint32 state, Uint8 repeat, double timestamp, double deltaTime);
     virtual void Tick(double deltaTime);
+    
 protected:
     virtual void HandleWindowResize(float x, float y);
-
+    GLuint shaderProgram;
+    GLuint vao;
+    float time;
+    
 private:
     virtual void SetupScene();
 

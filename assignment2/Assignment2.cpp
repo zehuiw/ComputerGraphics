@@ -3,6 +3,8 @@
 #include "common/Utility/Mesh/Simple/PrimitiveCreator.h"
 #include "common/Utility/Mesh/Loading/MeshLoader.h"
 #include <cmath>
+#include <fstream>
+#include <iterator>
 
 namespace
 {
@@ -37,6 +39,7 @@ bool VerifyProgramLink(GLuint shaderProgram)
 Assignment2::Assignment2(std::shared_ptr<class Scene> inputScene, std::shared_ptr<class Camera> inputCamera):
     Application(std::move(inputScene), std::move(inputCamera))
 {
+    time = 0.;
     vertexPositions = 
         std::initializer_list<glm::vec4>({
             // Triangle 1
@@ -90,12 +93,38 @@ void Assignment2::HandleWindowResize(float x, float y)
 void Assignment2::SetupExample1()
 {
     // Insert "Load and Compile Shaders" code here.
-
+    const std::string vertFilename = std::string(STRINGIFY(SHADER_PATH)) + "/hw2/hw2.vert";
+    const std::string fragFilename = std::string(STRINGIFY(SHADER_PATH)) + "/hw2/hw2.frag";
+    std::ifstream fsV(vertFilename, std::ifstream::in);
+    std::ifstream fsF(fragFilename, std::ifstream::in);
+    if(!fsV.is_open()){
+        std::cerr <<"ERROR: Cound not read shader from" << vertFilename << std::endl;
+        return;
+    };
+    if(!fsV.is_open()){
+        std::cerr <<"ERROR: Cound not read shader from" << fragFilename << std::endl;
+        return;
+    };
+    std::string shaderVerText((std::istreambuf_iterator<char>(fsV)), std::istreambuf_iterator<char>());
+    std::string shaderFragText((std::istreambuf_iterator<char>(fsF)), std::istreambuf_iterator<char>());
+    const char* shaderVerTextStr = shaderVerText.c_str();
+    const char* shaderFragTextStr = shaderFragText.c_str();
+    GLuint vertObj = OGL_CALL(glCreateShader(GL_VERTEX_SHADER));
+    GLuint fragObj = OGL_CALL(glCreateShader(GL_FRAGMENT_SHADER));
+    OGL_CALL(glShaderSource(vertObj, 1, &shaderVerTextStr, NULL));
+    OGL_CALL(glShaderSource(fragObj, 1, &shaderFragTextStr, NULL));
+    OGL_CALL(glCompileShader(vertObj));
+    OGL_CALL(glCompileShader(fragObj));
+    shaderProgram = OGL_CALL(glCreateProgram());
+    OGL_CALL(glAttachShader(shaderProgram, vertObj));
+    OGL_CALL(glAttachShader(shaderProgram, fragObj));
+    glLinkProgram(shaderProgram);
+ 
     // Checkpoint 1.
     // Modify this part to contain your vertex shader ID, fragment shader ID, and shader program ID.
-    const GLuint vertexShaderId = 0;
-    const GLuint fragmentShaderId = 0;
-    const GLuint shaderProgramId = 0;
+    const GLuint vertexShaderId = vertObj;
+    const GLuint fragmentShaderId = fragObj;
+    const GLuint shaderProgramId = shaderProgram;
 
     // DO NOT EDIT OR REMOVE THE CODE IN THIS SECTION
     if (!VerifyShaderCompile(vertexShaderId) || !VerifyShaderCompile(fragmentShaderId) || !VerifyProgramLink(shaderProgramId)) {
@@ -111,9 +140,27 @@ void Assignment2::SetupExample1()
     // FINISH DO NOT EDIT OR REMOVE THE CODE IN THIS SECTION
 
     // Insert "Setup Buffers" code here.
+    OGL_CALL(glGenVertexArrays(1, &vao));
+    OGL_CALL(glBindVertexArray(vao));
+    GLuint vertexBuffer;
+    OGL_CALL(glGenBuffers(1, &vertexBuffer));
+    OGL_CALL(glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer));
+    OGL_CALL(glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec4) * 6, &vertexPositions[0], GL_STATIC_DRAW));
+    OGL_CALL(glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0));
+    OGL_CALL(glEnableVertexAttribArray(0));
 }
 
 void Assignment2::Tick(double deltaTime)
 {
     // Insert "Send Buffers to the GPU" and "Slightly-More Advanced Shaders" code here.
+    OGL_CALL(glUseProgram(shaderProgram));
+    OGL_CALL(glBindVertexArray(vao));
+    OGL_CALL(glDrawArrays(GL_TRIANGLES, 0, 6));
+    
+    time += deltaTime;
+   // std::cout << time << " ";
+    GLint var = OGL_CALL(glGetUniformLocation(shaderProgram, "inputTime"));
+    OGL_CALL(glUniform1f(var, time));
+    
+    
 }
